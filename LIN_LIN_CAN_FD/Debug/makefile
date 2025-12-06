@@ -60,8 +60,8 @@ all: main-build
 main-build: LIN_LIN_CAN_FD.elf secondary-outputs
 
 # Tool invocations
-LIN_LIN_CAN_FD.elf LIN_LIN_CAN_FD.map: $(OBJS) $(USER_OBJS) A:\4st_MY_PRJ\LIN_PROTOCOL\LIN_LIN_CAN_FD\STM32G431CBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "LIN_LIN_CAN_FD.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"A:\4st_MY_PRJ\LIN_PROTOCOL\LIN_LIN_CAN_FD\STM32G431CBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LIN_LIN_CAN_FD.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+LIN_LIN_CAN_FD.elf LIN_LIN_CAN_FD.map: $(OBJS) $(USER_OBJS) C:\Users\HungDk\Desktop\LIN_protocol\LIN_LIN_CAN_FD\STM32G431CBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "LIN_LIN_CAN_FD.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\HungDk\Desktop\LIN_protocol\LIN_LIN_CAN_FD\STM32G431CBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="LIN_LIN_CAN_FD.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

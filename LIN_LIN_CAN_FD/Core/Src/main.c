@@ -48,6 +48,7 @@ UART_HandleTypeDef huart2;
 uint8_t ID_LIN = 0x34;
 uint8_t ID_pid = 0;
 uint8_t buff_data[8];
+uint8_t leng_buff_data = 0; 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,6 +79,9 @@ uint8_t pid_Calc(uint8_t ID){
   return ID;  
 }
 
+uint8_t ID_Decode(uint8_t ID_pid){
+    return ID_pid &= 0x3F;
+}
 
 uint8_t CheckSum_Calc(uint8_t PID, uint8_t *data, uint8_t size){
   uint16_t Sum = PID; 
@@ -85,7 +89,7 @@ uint8_t CheckSum_Calc(uint8_t PID, uint8_t *data, uint8_t size){
   for(uint8_t i = 0; i < size; i++){
     Sum += data[i];
     if(Sum > 0xFF ){
-      Sum = Sum - 0xFF; 
+      Sum = (Sum & 0xFF) + 1; 
     }
   }
   Sum = 0xFF - Sum; 
@@ -100,23 +104,63 @@ void LIN_Master_Request(UART_HandleTypeDef *huart_LIN, uint8_t ID, uint8_t *buff
   for(uint8_t i = 2; i < 2+ size; i++){
     Buff_tx[i] = buff[i-2]; 
   }
-
+  Buff_tx[size+2] = CheckSum_Calc(ID_pid, buff, size); 
+  int a = 3;
+  if(size == 0){a = 2;}
   HAL_LIN_SendBreak(huart_LIN);
-  HAL_UART_Transmit(huart_LIN, Buff_tx, size + 2, 10);
+  HAL_UART_Transmit(huart_LIN, Buff_tx, size + a, 10);
   
 }
 
-
-
 //=================== RX mode ======================//
-
 uint8_t RxData[20];
+uint8_t RxData_rec[8]; 
+uint8_t Sts_LIN = 0; 
+uint8_t Size_Rx = 8; 
 
-uint8_t LIN_Slvae_Check_Request(uint8_t ID){
-	if(RxData[0] == 0 && RxData[1] == ID){
+uint8_t size_respond = 8;
+uint8_t buff_feedback[8];
 
+uint8_t flag_respond = 0;
+
+uint8_t CheckSum_Rx = 0;
+
+
+uint8_t LIN_Slave_Check_Request(uint8_t ID, uint8_t size){
+	if(RxData[0] == 0x00 && RxData[1] == 0x55 && RxData[2] == pid_Calc(ID_LIN)){
+		for(uint8_t i = 0; i< size; i++){
+			RxData_rec[i] = RxData[i + 3];
+			RxData[i+3] = 0;
+		} 
+		RxData[1] = 0;
+		RxData[2] = 0;
+		if(RxData[size + 3] == CheckSum_Calc(pid_Calc(ID), RxData_rec, size)){
+		  return 1;
+		}else{
+		  return 2; //Trạng thái đúng nhưng check sum sai
+		}
+	}else{
+    return 0; // data lỗi. 
+  }
+}
+
+uint8_t  LIN_Slave_Respond(UART_HandleTypeDef *huart_LIN, uint8_t ID, uint8_t size, uint8_t *buff_feedback){
+	uint8_t buff_respond[size + 1];
+    uint8_t Sts_LIN_in = LIN_Slave_Check_Request(ID_LIN, Size_Rx);
+
+	if(Sts_LIN_in == 2){
+		for(uint8_t i = 0; i < size ; i++){
+			buff_respond[i] = buff_feedback[i];
+		}
+		buff_respond[size] = CheckSum_Calc(pid_Calc(ID), buff_feedback, size);
+		HAL_UART_Transmit(huart_LIN, buff_respond, size + 1 , 10);
+		return 2;
+	}else{
+		return Sts_LIN_in;
 	}
 }
+
+
 
 
 /* USER CODE END 0 */
@@ -167,7 +211,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    LIN_Master_Request(&huart1, ID_LIN, buff_data, 0);
+    LIN_Master_Request(&huart1, ID_LIN, buff_data, leng_buff_data);
     HAL_Delay(200);
   }
   /* USER CODE END 3 */
@@ -337,6 +381,9 @@ static void MX_GPIO_Init(void)
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
   HAL_UARTEx_ReceiveToIdle_IT(&huart2, RxData, 20);
+
+
+  Sts_LIN = LIN_Slave_Respond(&huart2,ID_LIN, size_respond, buff_feedback);
 
 }
 
